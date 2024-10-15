@@ -3,6 +3,7 @@ package com.devsuperior.dsmovie.services;
 import com.devsuperior.dsmovie.dto.MovieDTO;
 import com.devsuperior.dsmovie.entities.MovieEntity;
 import com.devsuperior.dsmovie.repositories.MovieRepository;
+import com.devsuperior.dsmovie.services.exceptions.ResourceNotFoundException;
 import com.devsuperior.dsmovie.tests.MovieFactory;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,6 +19,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
 
@@ -30,20 +32,25 @@ public class MovieServiceTests {
 	@Mock
 	private MovieRepository repository;
 
+	private Long existingMovieId, nonExistingMovieId;
 	private String movieTitle;
-
 	private MovieEntity movie;
 	private MovieDTO movieDTO;
 	private PageImpl<MovieEntity> pageMovie;
 
 	@BeforeEach
 	void setUp() throws Exception {
+		existingMovieId = 1L;
+		nonExistingMovieId = 2L;
 		movieTitle = "Test Movie";
 		movie = MovieFactory.createMovieEntity();
 		movieDTO = MovieFactory.createMovieDTO();
 		pageMovie = new PageImpl<>(List.of(movie));
 
 		Mockito.when(repository.searchByTitle(any(), (Pageable) any())).thenReturn(pageMovie);
+
+		Mockito.when(repository.findById(existingMovieId)).thenReturn(Optional.of(movie));
+		Mockito.when(repository.findById(nonExistingMovieId)).thenReturn(Optional.empty());
 	}
 
 	@Test
@@ -58,11 +65,17 @@ public class MovieServiceTests {
 	
 	@Test
 	public void findByIdShouldReturnMovieDTOWhenIdExists() {
-		
+		MovieDTO result = service.findById(existingMovieId);
+
+		Assertions.assertNotNull(result);
+		Assertions.assertEquals(result.getTitle(), movieTitle);
 	}
 	
 	@Test
 	public void findByIdShouldThrowResourceNotFoundExceptionWhenIdDoesNotExist() {
+		Assertions.assertThrows(ResourceNotFoundException.class, () -> {
+			MovieDTO result = service.findById(nonExistingMovieId);
+		});
 	}
 	
 	@Test
